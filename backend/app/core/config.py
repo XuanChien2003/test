@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = (
         "postgresql+asyncpg://fabbi:fabbi_secret@localhost:5432/postgres"
     )
+    DB_ECHO: bool = True
 
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"

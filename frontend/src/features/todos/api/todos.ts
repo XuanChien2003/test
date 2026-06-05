@@ -32,7 +32,7 @@ interface UpdateTodoRequest {
 }
 
 
-export function useTodos(page: number = 1, size: number = 1000000) {
+export function useTodos(page: number = 1, size: number = 10000) {
   return useQuery({
     queryKey: ["todos"],
     queryFn: async (): Promise<TodoListResponse> => {

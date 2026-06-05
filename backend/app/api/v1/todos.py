@@ -2,6 +2,7 @@ import json
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_redis
@@ -41,10 +42,13 @@ async def list_todos(
         cached_data = json.loads(cached)
         return TodoListResponse(**cached_data)
 
-    todos, total = await get_todos(db, skip=skip, limit=size)
+    todos, total = await get_todos(db, user_id=current_user.id, skip=skip, limit=size)
 
-    response = TodoListResponse(
-        items=[
+    items = []
+    for todo in todos:
+        user_result = await db.execute(select(User).where(User.id == todo.user_id))
+        user = user_result.scalar_one_or_none()
+        items.append(
             TodoResponse(
                 id=todo.id,
                 title=todo.title,
@@ -53,10 +57,12 @@ async def list_todos(
                 user_id=todo.user_id,
                 created_at=todo.created_at,
                 updated_at=todo.updated_at,
-                user_email=todo.user.email if todo.user else None,
+                user_email=user.email if user else None,
             )
-            for todo in todos
-        ],
+        )
+
+    response = TodoListResponse(
+        items=items,
         total=total,
         page=page,
         size=size,
@@ -93,8 +99,6 @@ async def get_todo(
             detail="Todo not found",
         )
 
-
-
     return todo
 
 
@@ -114,10 +118,7 @@ async def update_existing_todo(
             detail="Todo not found",
         )
 
-
-
     update_data = todo_data.model_dump()
-
 
     if todo_data.completed:
         todo.completed = todo_data.completed
@@ -129,8 +130,6 @@ async def update_existing_todo(
         todo.description = update_data["description"]
 
     updated_todo = await update_todo(db, todo, {})
-
-
 
     return updated_todo
 
@@ -150,10 +149,6 @@ async def delete_existing_todo(
             detail="Todo not found",
         )
 
-
-
     await delete_todo(db, todo)
-
-
 
     return None

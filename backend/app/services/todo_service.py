@@ -23,16 +23,17 @@ async def create_todo(
 
 async def get_todos(
     db: AsyncSession,
+    user_id: uuid.UUID,
     skip: int = 0,
     limit: int = 20,
 ) -> tuple[list[Todo], int]:
-    """Get all todos with pagination."""
-    query = select(Todo).offset(skip).limit(limit)
+    """Get all todos with pagination for a specific user."""
+    query = select(Todo).where(Todo.user_id == user_id).offset(skip).limit(limit)
     result = await db.execute(query)
     todos = list(result.scalars().all())
 
     # Count total
-    count_query = select(func.count()).select_from(Todo)
+    count_query = select(func.count()).select_from(Todo).where(Todo.user_id == user_id)
     total = await db.execute(count_query)
 
     return todos, total.scalar_one()

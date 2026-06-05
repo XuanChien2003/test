@@ -3,7 +3,7 @@ import os
 import sys
 import time
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 import random
 
 from sqlalchemy import select, insert
@@ -88,7 +88,7 @@ async def seed_db():
                         "id": user_id,
                         "email": email,
                         "hashed_password": shared_password_hash,
-                        "created_at": datetime.utcnow(),
+                        "created_at": datetime.now(timezone.utc),
                     }
                 )
 
@@ -136,7 +136,7 @@ async def seed_db():
             batch_count = min(TODO_BATCH_SIZE, TARGET_TODOS - batch_offset)
             todos_batch = []
             for _ in range(batch_count):
-                now = datetime.utcnow()
+                now = datetime.now(timezone.utc)
                 todos_batch.append(
                     {
                         "id": uuid.uuid4(),

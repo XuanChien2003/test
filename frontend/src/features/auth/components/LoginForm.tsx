@@ -16,6 +16,7 @@ export function LoginForm() {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -34,6 +35,11 @@ export function LoginForm() {
         toast.error(message || "Login failed. Please try again.");
       },
     });
+  };
+
+  const handleAutofillDemo = () => {
+    setValue("email", "demo@test.com");
+    setValue("password", "Demo@123");
   };
 
   return (
@@ -78,6 +84,25 @@ export function LoginForm() {
           Sign up
         </Link>
       </p>
+
+      <div className="mt-6 p-4 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors text-xs space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="font-semibold text-foreground">Demo Account</span>
+          <button
+            type="button"
+            onClick={handleAutofillDemo}
+            className="text-primary hover:underline font-medium cursor-pointer"
+          >
+            Autofill
+          </button>
+        </div>
+        <div className="grid grid-cols-[60px_1fr] gap-x-2 gap-y-1 text-muted-foreground select-all">
+          <span>Email:</span>
+          <code className="font-mono text-primary">demo@test.com</code>
+          <span>Password:</span>
+          <code className="font-mono text-primary">Demo@123</code>
+        </div>
+      </div>
     </form>
   );
 }
