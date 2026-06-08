@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = (
         "postgresql+asyncpg://fabbi:fabbi_secret@localhost:5432/postgres"
     )
-    DB_ECHO: bool = True
+    DB_ECHO: bool = False  # BUG-11 FIX: was True by default, causing SQL flood in production logs
 
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"

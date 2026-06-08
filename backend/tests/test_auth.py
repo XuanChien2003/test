@@ -60,18 +60,50 @@ async def test_get_current_user(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_logout(client: AsyncClient):
-    """Test logout endpoint."""
+    """Test logout endpoint.
+
+    BUG-09 FIX: logout now requires refresh_token in body to blacklist it.
+    """
     # Register and get token
     reg_response = await client.post(
         "/api/v1/auth/register",
         json={"email": "logout@example.com", "password": "password123"},
     )
     token = reg_response.json()["access_token"]
+    refresh_token = reg_response.json()["refresh_token"]
 
-    # Logout
+    # Logout — send refresh_token so it can be blacklisted
     response = await client.post(
         "/api/v1/auth/logout",
+        json={"refresh_token": refresh_token},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
     assert response.json()["message"] == "Successfully logged out"
+
+
+@pytest.mark.asyncio
+async def test_login_user_enumeration_prevented(client: AsyncClient):
+    """BUG-08 FIX: Both wrong email and wrong password return the same 401."""
+    # Register a user first
+    await client.post(
+        "/api/v1/auth/register",
+        json={"email": "enum@example.com", "password": "password123"},
+    )
+
+    # Wrong email — must return 401 (not 404)
+    response = await client.post(
+        "/api/v1/auth/login",
+        json={"email": "nonexistent@example.com", "password": "whatever"},
+    )
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid email or password"
+
+    # Wrong password — must return same 401
+    response = await client.post(
+        "/api/v1/auth/login",
+        json={"email": "enum@example.com", "password": "wrongpassword"},
+    )
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid email or password"
+

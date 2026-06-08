@@ -23,11 +23,15 @@ def upgrade() -> None:
     op.create_table(
         "users",
         sa.Column("id", sa.Uuid(), nullable=False),
-        sa.Column("email", sa.String(length=255), nullable=False),
+        # BUG-07 FIX: email must be unique; DB enforces this to prevent race-condition duplicates
+        sa.Column("email", sa.String(length=255), nullable=False, unique=True),
         sa.Column("hashed_password", sa.String(length=255), nullable=False),
-        sa.Column("created_at", sa.DateTime(), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=True),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("email", name="uq_users_email"),
     )
+    # Add index on email for fast lookups
+    op.create_index("ix_users_email", "users", ["email"], unique=True)
 
     # Create todos table
     op.create_table(
@@ -45,5 +49,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    op.drop_index("ix_users_email", table_name="users")
     op.drop_table("todos")
     op.drop_table("users")

@@ -6,9 +6,19 @@ import { useDeleteTodo, useToggleTodo } from "../api/todos";
 
 interface TodoListProps {
   todos: Todo[];
+  selectedIds: string[];
+  onSelectToggle: (id: string) => void;
+  onAttachTag: (todoId: string, tagId: string) => void;
+  onDetachTag: (todoId: string, tagId: string) => void;
 }
 
-export function TodoList({ todos }: TodoListProps) {
+export function TodoList({
+  todos,
+  selectedIds,
+  onSelectToggle,
+  onAttachTag,
+  onDetachTag,
+}: TodoListProps) {
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
   const deleteTodo = useDeleteTodo();
   const toggleTodo = useToggleTodo();
@@ -22,29 +32,37 @@ export function TodoList({ todos }: TodoListProps) {
   };
 
   const handleDelete = (id: string) => {
-    deleteTodo.mutate(id);
+    if (confirm("Are you sure you want to delete this todo?")) {
+      deleteTodo.mutate(id);
+    }
   };
 
   if (todos.length === 0) {
     return (
-      <div className="text-center py-12 text-muted-foreground">
-        <p className="text-lg">No todos yet</p>
-        <p className="text-sm mt-1">Create your first todo to get started</p>
+      <div className="text-center py-12 text-muted-foreground border border-dashed rounded-lg bg-card/20">
+        <p className="text-lg font-medium">No todos found</p>
+        <p className="text-sm mt-1">Try relaxing your filters or create a new todo</p>
       </div>
     );
   }
+
+  const selectedSet = new Set(selectedIds);
 
   return (
     <>
       <div className="space-y-2">
         {todos.map((todo, index) => (
           <TodoItem
-            key={index}
+            key={todo.id}
             todo={todo}
             index={index}
             onToggle={handleToggle}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            isSelected={selectedSet.has(todo.id)}
+            onSelectToggle={onSelectToggle}
+            onAttachTag={onAttachTag}
+            onDetachTag={onDetachTag}
           />
         ))}
       </div>

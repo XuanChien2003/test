@@ -2,6 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
+import type { Tag } from "../../tags/api/tags";
 
 export interface Todo {
   id: string;
@@ -11,33 +12,49 @@ export interface Todo {
   user_id: string;
   created_at: string;
   updated_at: string;
+  tags: Tag[];
 }
 
-interface TodoListResponse {
+export interface TodoListResponse {
   items: Todo[];
   total: number;
   page: number;
   size: number;
 }
 
-interface CreateTodoRequest {
+export interface CreateTodoRequest {
   title: string;
   description?: string;
 }
 
-interface UpdateTodoRequest {
+export interface UpdateTodoRequest {
   title?: string;
   description?: string;
   completed?: boolean;
 }
 
+export interface TodoFilters {
+  status?: string;
+  tag_id?: string;
+  keyword?: string;
+  date_from?: string;
+  date_to?: string;
+}
 
-export function useTodos(page: number = 1, size: number = 10000) {
+export function useTodos(page: number = 1, size: number = 20, filters: TodoFilters = {}) {
   return useQuery({
-    queryKey: ["todos"],
+    queryKey: ["todos", page, size, filters],
     queryFn: async (): Promise<TodoListResponse> => {
       const response = await api.get("/todos", {
-        params: { page, size },
+        params: {
+          page,
+          size,
+          status: filters.status || undefined,
+          tag_id: filters.tag_id || undefined,
+          keyword: filters.keyword || undefined,
+          date_from: filters.date_from || undefined,
+          date_to: filters.date_to || undefined,
+        },
       });
       return response.data;
     },
@@ -60,7 +77,6 @@ export function useCreateTodo() {
   });
 }
 
-
 export function useUpdateTodo() {
   return useMutation({
     mutationFn: async ({
@@ -77,22 +93,35 @@ export function useUpdateTodo() {
       // Cancel outgoing queries
       await queryClient.cancelQueries({ queryKey: ["todos"] });
 
-      // Snapshot previous value
-      const previousTodos = queryClient.getQueryData<TodoListResponse>(["todos"]);
+      // Find all queries matching ["todos"]
+      const queries = queryClient.getQueryCache().findAll({ queryKey: ["todos"] });
+      const previousQueries = queries.map((query) => ({
+        queryKey: query.queryKey,
+        data: query.state.data,
+      }));
 
       // Optimistically update
-      if (previousTodos) {
-        queryClient.setQueryData<TodoListResponse>(["todos"], {
-          ...previousTodos,
-          items: previousTodos.items.map((todo) =>
-            todo.id === id ? { ...todo, ...data } : todo
-          ),
+      queries.forEach((query) => {
+        const queryData = query.state.data as TodoListResponse | undefined;
+        if (queryData) {
+          queryClient.setQueryData<TodoListResponse>(query.queryKey, {
+            ...queryData,
+            items: queryData.items.map((todo) =>
+              todo.id === id ? { ...todo, ...data } : todo
+            ),
+          });
+        }
+      });
+
+      return { previousQueries };
+    },
+    onError: (_err, _variables, context) => {
+      const ctx = context as { previousQueries?: { queryKey: any; data: any }[] } | undefined;
+      if (ctx?.previousQueries) {
+        ctx.previousQueries.forEach(({ queryKey, data }) => {
+          queryClient.setQueryData(queryKey, data);
         });
       }
-
-      return { previousTodos };
-    },
-    onError: () => {
       toast.error("Failed to update todo");
     },
     onSettled: () => {

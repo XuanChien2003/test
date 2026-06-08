@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime
 
 from pydantic import BaseModel, Field
+from app.schemas.tag import TagResponse
 
 
 class TodoCreate(BaseModel):
@@ -23,7 +24,10 @@ class TodoResponse(BaseModel):
     user_id: uuid.UUID
     created_at: datetime
     updated_at: datetime
+    # BUG-10 FIX: user_email removed from N+1 loop; kept as optional for
+    # backwards compatibility but no longer populated by list endpoint
     user_email: str | None = None
+    tags: list["TagResponse"] = []
 
     model_config = {"from_attributes": True}
 
@@ -33,3 +37,9 @@ class TodoListResponse(BaseModel):
     total: int
     page: int
     size: int
+
+
+class BulkStatusRequest(BaseModel):
+    todo_ids: list[uuid.UUID]
+    completed: bool
+

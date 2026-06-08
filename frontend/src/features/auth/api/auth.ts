@@ -1,5 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { queryClient } from "@/lib/queryClient";
 
 interface LoginRequest {
   email: string;
@@ -46,11 +47,22 @@ export function useRegister() {
 export function useLogout() {
   return useMutation({
     mutationFn: async () => {
-      await api.post("/auth/logout");
+      // BUG-09 FIX: Send refresh_token to backend so it can be blacklisted
+      const refreshToken = localStorage.getItem("refresh_token");
+      await api.post("/auth/logout", { refresh_token: refreshToken ?? "" });
     },
     onSuccess: () => {
       localStorage.removeItem("access_token");
       localStorage.removeItem("refresh_token");
+      // BUG-15 FIX: Clear all React Query cache on logout so cached todos/user
+      // data is not visible to the next user on the same browser session.
+      queryClient.clear();
+    },
+    onError: () => {
+      // Even on error, clear local state
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+      queryClient.clear();
     },
   });
 }

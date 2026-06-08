@@ -56,6 +56,8 @@ def override_get_redis():
     mock_redis.get = AsyncMock(return_value=None)
     mock_redis.set = AsyncMock()
     mock_redis.delete = AsyncMock()
+    mock_redis.exists = AsyncMock(return_value=False)
+    mock_redis.delete_pattern = AsyncMock()  # BUG-06 FIX: support pattern delete
     return mock_redis
 
 

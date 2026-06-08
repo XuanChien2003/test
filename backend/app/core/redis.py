@@ -34,5 +34,20 @@ class RedisClient:
     async def exists(self, key: str) -> bool:
         return await self._redis.exists(key)
 
+    async def delete_pattern(self, pattern: str) -> None:
+        """Delete all keys matching a glob pattern using SCAN (safe for production).
+
+        BUG-06 FIX support: Needed to invalidate all user-scoped cache pages
+        without knowing the exact page/size combinations.
+        Uses SCAN instead of KEYS to avoid blocking the Redis server.
+        """
+        cursor = 0
+        while True:
+            cursor, keys = await self._redis.scan(cursor, match=pattern, count=100)
+            if keys:
+                await self._redis.delete(*keys)
+            if cursor == 0:
+                break
+
 
 redis_client = RedisClient()
